@@ -1,65 +1,211 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import { getProjects, getProjectsByStatus } from "../services/api";
+
+import {
+  FolderKanban,
+  ClipboardList,
+  Activity,
+  PauseCircle,
+  BadgeCheck,
+  Ban,
+} from "lucide-react";
+
+interface Counts {
+  total: number;
+  planning: number;
+  running: number;
+  hold: number;
+  completed: number;
+  stopped: number;
+}
+
+export default function Dashboard() {
+  const [counts, setCounts] = useState<Counts>({
+    total: 0,
+    planning: 0,
+    running: 0,
+    hold: 0,
+    completed: 0,
+    stopped: 0,
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [total, planning, running, hold, completed, stopped] =
+        await Promise.all([
+          getProjects(),
+          getProjectsByStatus("In Planning"),
+          getProjectsByStatus("running"),
+          getProjectsByStatus("On Hold"),
+          getProjectsByStatus("completed"),
+          getProjectsByStatus("stopped"),
+        ]);
+
+      setCounts({
+        total: total?.pagination?.total || 0,
+        planning: planning?.pagination?.total || 0,
+        running: running?.pagination?.total || 0,
+        hold: hold?.pagination?.total || 0,
+        completed: completed?.pagination?.total || 0,
+        stopped: stopped?.pagination?.total || 0,
+      });
+    };
+
+    fetchData();
+  }, []);
+
+  const percentage = (value: number) => {
+    if (counts.total === 0) return 0;
+
+    return Number(((value / counts.total) * 100).toFixed(1));
+  };
+
+  const cards = [
+    {
+      title: "TOTAL PROJECTS",
+      value: counts.total,
+      icon: <FolderKanban size={32} className="text-white" />,
+      color: "bg-slate-500",
+      light: "bg-slate-50",
+      percentage: 100,
+    },
+    {
+      title: "IN PLANNING",
+      value: counts.planning,
+      icon: <ClipboardList size={32} className="text-white" />,
+      color: "bg-[#0e7490]",
+      light: "bg-cyan-50",
+      percentage: percentage(counts.planning),
+    },
+    {
+      title: "RUNNING",
+      value: counts.running,
+      icon: <Activity size={32} className="text-white" />,
+      color: "bg-[#53a80c]",
+      light: "bg-green-50",
+      percentage: percentage(counts.running),
+    },
+    {
+      title: "ON HOLD",
+      value: counts.hold,
+      icon: <PauseCircle size={32} className="text-white" />,
+      color: "bg-yellow-500",
+      light: "bg-yellow-50",
+      percentage: percentage(counts.hold),
+    },
+    {
+      title: "COMPLETED",
+      value: counts.completed,
+      icon: <BadgeCheck size={32} className="text-white" />,
+      color: "bg-[#53a80c]",
+      light: "bg-lime-50",
+      percentage: percentage(counts.completed),
+    },
+    {
+      title: "STOPPED",
+      value: counts.stopped,
+      icon: <Ban size={32} className="text-white" />,
+      color: "bg-[#df6565]",
+      light: "bg-red-50",
+      percentage: percentage(counts.stopped),
+    },
+  ];
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6 gap-6">
+        {cards.map((card, index) => (
+          <div
+            key={index}
+            className="
+              relative
+              bg-white
+              rounded-3xl
+              shadow-lg
+              hover:shadow-2xl
+              transition-all
+              duration-300
+              hover:-translate-y-2
+              overflow-hidden
+              p-6
+            "
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+            {/* Top Bar */}
+            <div className={`absolute top-0 left-0 h-2 w-full ${card.color}`} />
+
+            {/* Background Circle */}
+            <div
+              className={`
+                absolute
+                -right-10
+                -top-10
+                h-32
+                w-32
+                rounded-full
+                ${card.light}
+              `}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+
+            {/* Header */}
+            <div className="flex items-center justify-between relative z-10">
+              <div>
+                <p className="text-sm text-gray-500 font-medium">
+                  {card.title}
+                </p>
+
+                <h2 className="text-5xl font-bold text-gray-800 mt-3">
+                  {card.value}
+                </h2>
+              </div>
+
+              <div
+                className={`
+                  h-16
+                  w-16
+                  rounded-2xl
+                  ${card.color}
+                  flex
+                  items-center
+                  justify-center
+                  shadow-lg
+                `}
+              >
+                {card.icon}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-8">
+              <div className="flex justify-between text-sm mb-2">
+                <span>{card.percentage}%</span>
+              </div>
+
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`${card.color} h-2 rounded-full`}
+                  style={{
+                    width: `${card.percentage}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Bottom Border */}
+            <div
+              className={`
+                absolute
+                bottom-0
+                left-0
+                h-1
+                w-full
+                ${card.color}
+              `}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
